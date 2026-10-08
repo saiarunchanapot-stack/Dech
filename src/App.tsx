@@ -134,9 +134,6 @@ export default function App() {
   const statusFilterId = useId();
   const urgencyFilterId = useId();
 
-  // Quota Defense Banner State
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
-
   // Authentication State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -213,6 +210,7 @@ export default function App() {
   };
 
   const isPhoneRevealed = (id: string): boolean => {
+    if (!isAdmin) return false;
     if (!globalPrivacyMode) return true;
     return revealedPhoneIds.includes(id);
   };
@@ -223,13 +221,6 @@ export default function App() {
     if (currentUser.isAdmin) return true;
     return isAdminEmail(currentUser.email);
   }, [currentUser]);
-
-  // Quota event listener
-  useEffect(() => {
-    const handleQuotaExceeded = () => setQuotaExceeded(true);
-    window.addEventListener('gmp-quota-exceeded', handleQuotaExceeded);
-    return () => window.removeEventListener('gmp-quota-exceeded', handleQuotaExceeded);
-  }, []);
 
   // Sync cache with localStorage
   useEffect(() => {
@@ -770,23 +761,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Quota defense banner */}
-      {quotaExceeded && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
-          <span>
-            Google Maps Platform quota reached. If you are the app owner, visit{' '}
-            <a
-              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold text-amber-950 hover:text-amber-800"
-            >
-              maps developer site
-            </a>{' '}
-            for instructions to update your account.
-          </span>
-        </div>
-      )}
 
       {/* Global Toast */}
       {toastMessage && (
@@ -1437,29 +1411,31 @@ export default function App() {
                   <option value="ต่ำ">🟢 ต่ำ</option>
                 </select>
 
-                {/* Privacy Mode Toggle: ปิดเบอร์โทรเฉพาะหน้า */}
-                <button
-                  type="button"
-                  onClick={() => setGlobalPrivacyMode((prev) => !prev)}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border ${
-                    globalPrivacyMode
-                      ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 shadow-sm'
-                      : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                  }`}
-                  title="เปิด-ปิดการปิดบังเบอร์โทรศัพท์บนแดชบอร์ด (PDPA Privacy)"
-                >
-                  {globalPrivacyMode ? (
-                    <>
-                      <EyeOff className="w-3.5 h-3.5 text-amber-700" />
-                      <span>ปิดเบอร์โทร (PDPA) &bull; ดูเป็นเอกๆ</span>
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-3.5 h-3.5 text-slate-600" />
-                      <span>แสดงเบอร์โทรทั้งหมด</span>
-                    </>
-                  )}
-                </button>
+                {/* Privacy Mode Toggle: แสดงเฉพาะผู้ดูแลระบบ (Admin) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setGlobalPrivacyMode((prev) => !prev)}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border ${
+                      globalPrivacyMode
+                        ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 shadow-sm'
+                        : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                    }`}
+                    title="เปิด-ปิดการปิดบังเบอร์โทรศัพท์บนแดชบอร์ด (Admin Privacy Control)"
+                  >
+                    {globalPrivacyMode ? (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5 text-amber-700" />
+                        <span>ปิดเบอร์โทร &bull; ดูเป็นเอกๆ</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5 text-slate-600" />
+                        <span>แสดงเบอร์โทรทั้งหมด</span>
+                      </>
+                    )}
+                  </button>
+                )}
 
                 {isAdmin && (
                   <button
@@ -1511,38 +1487,45 @@ export default function App() {
                           <td className="px-4 py-3.5">
                             <div className="font-bold text-slate-900">{req.reporter_name}</div>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              {isPhoneRevealed(req.id) ? (
-                                <>
-                                  <a
-                                    href={`tel:${req.phone}`}
-                                    className="text-xs text-sky-600 hover:underline flex items-center gap-1 font-semibold"
-                                  >
-                                    <Phone className="w-3 h-3" /> {req.phone}
-                                  </a>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => toggleRevealPhone(req.id, e)}
-                                    title="ปิดซ่อนเบอร์โทร (เป็นเอกๆ)"
-                                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-                                  >
-                                    <EyeOff className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
+                              {isAdmin ? (
+                                isPhoneRevealed(req.id) ? (
+                                  <>
+                                    <a
+                                      href={`tel:${req.phone}`}
+                                      className="text-xs text-sky-600 hover:underline flex items-center gap-1 font-semibold"
+                                    >
+                                      <Phone className="w-3 h-3" /> {req.phone}
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => toggleRevealPhone(req.id, e)}
+                                      title="ปิดซ่อนเบอร์โทร (เป็นเอกๆ)"
+                                      className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                                    >
+                                      <EyeOff className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                                      {maskPhoneNumber(req.phone)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => toggleRevealPhone(req.id, e)}
+                                      title="คลิกเพื่อเปิดดูเบอร์โทรเฉพาะรายการนี้ (Admin)"
+                                      className="px-2 py-0.5 rounded-lg text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 font-bold transition flex items-center gap-1 text-[11px] cursor-pointer"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>ดูเบอร์</span>
+                                    </button>
+                                  </>
+                                )
                               ) : (
-                                <>
-                                  <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
-                                    {maskPhoneNumber(req.phone)}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => toggleRevealPhone(req.id, e)}
-                                    title="คลิกเพื่อเปิดดูเบอร์โทรเฉพาะรายการนี้ (เป็นเอกๆ)"
-                                    className="px-2 py-0.5 rounded-lg text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 font-bold transition flex items-center gap-1 text-[11px] cursor-pointer"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                    <span>ดูเบอร์</span>
-                                  </button>
-                                </>
+                                // Regular user view: strictly masked phone number, NO "ดูเบอร์" button
+                                <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                                  {maskPhoneNumber(req.phone)}
+                                </span>
                               )}
                             </div>
                           </td>
@@ -1747,29 +1730,31 @@ export default function App() {
                   <option value="เสร็จสิ้น">🟢 เสร็จสิ้น</option>
                 </select>
 
-                {/* Map Privacy Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setGlobalPrivacyMode((prev) => !prev)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer border ml-1 ${
-                    globalPrivacyMode
-                      ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 shadow-sm'
-                      : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                  }`}
-                  title="เปิด-ปิดการปิดบังเบอร์โทรศัพท์บนแผนที่ (PDPA Privacy)"
-                >
-                  {globalPrivacyMode ? (
-                    <>
-                      <EyeOff className="w-3.5 h-3.5 text-amber-700" />
-                      <span>ปิดเบอร์โทร &bull; ดูเป็นเอกๆ</span>
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="w-3.5 h-3.5 text-slate-600" />
-                      <span>แสดงเบอร์โทร</span>
-                    </>
-                  )}
-                </button>
+                {/* Map Privacy Toggle: แสดงเฉพาะผู้ดูแลระบบ */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setGlobalPrivacyMode((prev) => !prev)}
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer border ml-1 ${
+                      globalPrivacyMode
+                        ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 shadow-sm'
+                        : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                    }`}
+                    title="เปิด-ปิดการปิดบังเบอร์โทรศัพท์บนแผนที่ (Admin Privacy Control)"
+                  >
+                    {globalPrivacyMode ? (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5 text-amber-700" />
+                        <span>ปิดเบอร์โทร &bull; ดูเป็นเอกๆ</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3.5 h-3.5 text-slate-600" />
+                        <span>แสดงเบอร์โทร</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1783,7 +1768,7 @@ export default function App() {
                       <MapPin className="w-5 h-5 text-rose-500" /> แผนที่ปักหมุดจุดเกิดเหตุ (Google Maps Live)
                     </h2>
                     <p className="text-xs text-slate-500">
-                      แสดงตำแหน่งหมุดความต้องการน้ำแบบเรียลไทม์ คลิกที่หมุดบนแผนที่เพื่อดูข้อมูลและเปิดนำทาง
+                      แสดงตำแหน่งหมุดความต้องการน้ำแบบเรียลไทม์บน Google Maps คลิกที่หมุดบนแผนที่เพื่อดูข้อมูลและเปิดนำทาง
                     </p>
                   </div>
                   <div className="text-right">
@@ -1793,7 +1778,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Google Map Overview Component */}
+                {/* OpenStreetMap Overview Component */}
                 <WaterMap
                   mode="overview"
                   requests={filteredRequests}
@@ -1801,6 +1786,7 @@ export default function App() {
                   revealedPhoneIds={revealedPhoneIds}
                   onToggleRevealPhone={toggleRevealPhone}
                   maskPhones={globalPrivacyMode}
+                  isAdmin={isAdmin}
                   onSelectRequest={(req) => {
                     setDetailModalReq(req);
                     setAdminNotesDraft(req.admin_notes || '');
@@ -1914,39 +1900,46 @@ export default function App() {
                                 👤 {req.reporter_name}
                               </span>
                               <div className="flex items-center gap-1">
-                                {isPhoneRevealed(req.id) ? (
-                                  <>
-                                    <a
-                                      href={`tel:${req.phone}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="text-sky-600 font-bold hover:underline flex items-center gap-0.5"
-                                    >
-                                      <Phone className="w-3 h-3" /> {req.phone}
-                                    </a>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => toggleRevealPhone(req.id, e)}
-                                      title="ปิดซ่อนเบอร์โทร (เป็นเอกๆ)"
-                                      className="p-0.5 text-slate-400 hover:text-slate-600 transition cursor-pointer"
-                                    >
-                                      <EyeOff className="w-3 h-3" />
-                                    </button>
-                                  </>
+                                {isAdmin ? (
+                                  isPhoneRevealed(req.id) ? (
+                                    <>
+                                      <a
+                                        href={`tel:${req.phone}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-sky-600 font-bold hover:underline flex items-center gap-0.5"
+                                      >
+                                        <Phone className="w-3 h-3" /> {req.phone}
+                                      </a>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => toggleRevealPhone(req.id, e)}
+                                        title="ปิดซ่อนเบอร์โทร (เป็นเอกๆ)"
+                                        className="p-0.5 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                                      >
+                                        <EyeOff className="w-3 h-3" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                                        {maskPhoneNumber(req.phone)}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => toggleRevealPhone(req.id, e)}
+                                        title="คลิกเปิดดูเบอร์โทรเฉพาะรายการนี้ (Admin)"
+                                        className="p-0.5 text-sky-600 hover:text-sky-800 font-bold flex items-center gap-0.5 text-[10px] cursor-pointer"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        <span>ดูเบอร์</span>
+                                      </button>
+                                    </>
+                                  )
                                 ) : (
-                                  <>
-                                    <span className="font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
-                                      {maskPhoneNumber(req.phone)}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => toggleRevealPhone(req.id, e)}
-                                      title="คลิกเปิดดูเบอร์โทรเฉพาะรายการนี้ (เป็นเอกๆ)"
-                                      className="p-0.5 text-sky-600 hover:text-sky-800 font-bold flex items-center gap-0.5 text-[10px] cursor-pointer"
-                                    >
-                                      <Eye className="w-3 h-3" />
-                                      <span>ดูเบอร์</span>
-                                    </button>
-                                  </>
+                                  // Regular user view: strictly masked phone number, NO "ดูเบอร์" button
+                                  <span className="font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
+                                    {maskPhoneNumber(req.phone)}
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -2171,24 +2164,26 @@ export default function App() {
                 <div className="bg-slate-50 p-3 rounded-2xl">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400 text-xs">เบอร์โทรศัพท์:</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleRevealPhone(detailModalReq.id)}
-                      className="text-[11px] text-sky-600 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      {isPhoneRevealed(detailModalReq.id) ? (
-                        <>
-                          <EyeOff className="w-3 h-3" /> ซ่อน
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-3 h-3" /> แสดงเบอร์
-                        </>
-                      )}
-                    </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => toggleRevealPhone(detailModalReq.id)}
+                        className="text-[11px] text-sky-600 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        {isPhoneRevealed(detailModalReq.id) ? (
+                          <>
+                            <EyeOff className="w-3 h-3" /> ซ่อน
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3 h-3" /> แสดงเบอร์
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                   <div className="mt-1">
-                    {isPhoneRevealed(detailModalReq.id) ? (
+                    {isAdmin && isPhoneRevealed(detailModalReq.id) ? (
                       <a
                         href={`tel:${detailModalReq.phone}`}
                         className="font-bold text-sky-600 hover:underline flex items-center gap-1"
@@ -2224,12 +2219,12 @@ export default function App() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow hover:bg-blue-700"
                   >
-                    <MapPin className="w-3.5 h-3.5" /> เปิดนำทางบน Google Maps
+                    <MapPin className="w-3.5 h-3.5" /> เปิดนำทาง Google Maps
                   </a>
                 </div>
               </div>
 
-              {/* Map Preview for this Request */}
+              {/* Map Preview for this Request (Google Maps) */}
               <div className="rounded-2xl overflow-hidden border border-slate-200">
                 <WaterMap
                   mode="picker"
@@ -2237,6 +2232,7 @@ export default function App() {
                   selectedLng={detailModalReq.longitude}
                   className="h-[200px] w-full"
                   zoom={15}
+                  isAdmin={isAdmin}
                 />
               </div>
 
@@ -2364,7 +2360,19 @@ export default function App() {
         onClose={() => setShowAdminModal(false)}
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          showToast(`เข้าสู่ระบบผู้ดูแลระบบสำเร็จ: ${user.email}`, 'success');
+          if ((user.isAdmin || isAdminEmail(user.email || '')) && user.email) {
+            addAdminEmail(user.email);
+            const updated = getAdminEmails();
+            setAdminList(updated);
+            const newSettings = {
+              ...systemSettings,
+              adminEmails: updated,
+              notifyEmail: user.email,
+            };
+            setSystemSettings(newSettings);
+            saveSystemSettingsToFirestore(newSettings).catch(console.warn);
+          }
+          showToast(`เข้าสู่ระบบผู้ดูแลระบบสำเร็จ: ${user.email} (อัปเดตแจ้งเตือน API ตามอีเมลนี้)`, 'success');
         }}
       />
 
