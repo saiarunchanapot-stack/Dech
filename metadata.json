@@ -1,0 +1,10 @@
+{
+  "name": "Water Request & Crisis Center",
+  "description": "ระบบแจ้งปัญหาความต้องการน้ำ บันทึกลง Google Sheets แจ้งเตือนทาง Gmail พร้อมระบุพิกัด Google Maps เรียลไทม์",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

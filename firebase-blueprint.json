@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "water_request": {
+      "title": "Water Request",
+      "description": "Citizen report for water crisis or assistance",
+      "type": "object",
+      "properties": {
+        "request_number": { "type": "string" },
+        "reporter_name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "problem_details": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["ต่ำ", "ปานกลาง", "สูง", "เร่งด่วนมาก"] },
+        "address": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "google_maps_url": { "type": "string" },
+        "reported_at": { "type": "string" },
+        "status": { "type": "string", "enum": ["รอดำเนินการ", "กำลังดำเนินการ", "เสร็จสิ้น"] },
+        "completed_at": { "type": "string" },
+        "admin_notes": { "type": "string" }
+      },
+      "required": ["request_number", "reporter_name", "phone", "problem_details", "urgency", "latitude", "longitude", "status"]
+    },
+    "admin_user": {
+      "title": "Admin User",
+      "description": "Administrator account with authority to manage requests",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "superadmin"] },
+        "created_at": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/water_requests/{requestId}": {
+      "schema": "water_request",
+      "description": "Publicly reportable and administratively manageable water requests"
+    },
+    "/admins/{adminId}": {
+      "schema": "admin_user",
+      "description": "Registered administrator accounts"
+    }
+  }
+}

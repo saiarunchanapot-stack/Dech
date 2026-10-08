@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Water requests collection
+    match /water_requests/{requestId} {
+      allow read, create: if true;
+      allow update, delete: if true;
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
